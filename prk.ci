@@ -11,6 +11,7 @@ readonly int64_t	per_chare_x;
 readonly int64_t  	per_chare_y;
 readonly int64_t  	per_chare_edge_x;
 readonly int64_t  	per_chare_edge_y;
+readonly int         	lb_period;  // load balancing period (call AtSync every lb_period timesteps)
 readonly int  	removal_mode ;
 readonly int  	injection_mode ;
 readonly int  	injection_timestep;
