@@ -30,7 +30,7 @@ readonly int         	m ;   // determines the speed of "vertical move" of the pa
 mainchare Main {
 	entry Main(CkArgMsg* m);
     	entry [reductiontarget] void completed(int result);
-    	entry [reductiontarget] void validation(int result);
+    	entry [reductiontarget] void validation(long result);
     	entry [reductiontarget] void statistics(double result);
     	entry void done_initialization();	
     	entry void liveViz_support() {

@@ -51,12 +51,12 @@ Main_SDAG_CODE
 		
 			/* Initialize particles with geometric distribution */
 		if (strcmp(init_mode, "GEOMETRIC") == 0) {
-			cout<<"Entered GEOMETRIC"<<endl;
 			rho = atof(msg->argv[7]); // rho parameter for the initial geometric particle distribution
 			k = atoi(msg->argv[8]);   // determines the velocity of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
 			m = atoi(msg->argv[9]);   // determines the velocity of "vertical move" of the particle distribution -- m cells per time step
 			particle_mode = GEOMETRIC;
 			arg_offset = 10;
+			cout<<"Using GEOMETRIC with rho="<<rho<<" k="<<k<<" m="<<m<<endl;
 		}
 
 	
@@ -178,13 +178,13 @@ Main_SDAG_CODE
 		delete msg;
 	}
 	
-	void validation(int result)
+	void validation(long result)
 	{
-		int sum_particleId=n*(n-1)/2;
+		long sum_particleId=n*(n-1)/2;
 		if(result==sum_particleId)
-			cout<<"***********************************Successful validation and value of result is:"<<result<<endl;
+			cout<<"***********************************Successful validation (should be "<<sum_particleId<<" for n="<<n<<") and value of result is:"<<result<<endl;
     		else
-      			cout<<"***********************************Failed validation and value of result is:"<<result<<endl;
+      			cout<<"***********************************Failed validation (should be "<<sum_particleId<<" for n="<<n<<") and value of result is:"<<result<<endl;
 	}
 	void statistics(double result)
 	{
@@ -416,11 +416,11 @@ Cell_SDAG_CODE
 		}
 		if(!(injection_mode || removal_mode))
 		{
-			int val=0;
+			long val=0;
 		  	for(int i=0;i<particles.size();i++)
 		    		val+=particles[i].particle_ID;
 	    		CkCallback cb(CkReductionTarget(Main, validation), mainProxy);
-      			contribute(sizeof(int), &val, CkReduction::sum_int, cb);
+      			contribute(sizeof(long), &val, CkReduction::sum_long, cb);
     		}
     		CkCallback cb2(CkReductionTarget(Main, statistics), mainProxy);
     		contribute(sizeof(double), &simulation_time, CkReduction::sum_double, cb2);
