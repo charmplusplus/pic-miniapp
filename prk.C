@@ -13,7 +13,6 @@
 /*readonly*/ int64_t     g ;   // dimension of grid
 /*readonly*/ int 		chare_dim_x,chare_dim_y;
 /*readonly*/ int64_t	per_chare_x,per_chare_y,per_chare_edge_x,per_chare_edge_y;
-/*readonly*/ int         lb_period;  // load balancing period (call AtSync every lb_period timesteps)
 /*readonly*/ int         removal_mode , injection_mode, injection_timestep, removal_timestep;
 /*readonly*/ int         corner_top_left_x_inj, corner_bottom_right_x_inj, corner_top_left_y_inj, corner_bottom_right_y_inj, corner_top_left_x_rmv, corner_bottom_right_x_rmv, corner_top_left_y_rmv, corner_bottom_right_y_rmv;
 /*readonly*/ int         particles_per_cell;
@@ -41,7 +40,6 @@ Main_SDAG_CODE
 		char  *init_mode = msg->argv[4];    // Initialization mode for particles
 		chare_dim_x=atoi(msg->argv[5]); 
 		chare_dim_y=atoi(msg->argv[6]);
-		lb_period=atoi(msg->argv[7]);  // load balancing period
 		removal_mode = 0;
 		injection_mode = 0;
 		int arg_offset;
@@ -54,31 +52,33 @@ Main_SDAG_CODE
 			/* Initialize particles with geometric distribution */
 		if (strcmp(init_mode, "GEOMETRIC") == 0) {
 			cout<<"Entered GEOMETRIC"<<endl;
-			rho = atof(msg->argv[8]); // rho parameter for the initial geometric particle distribution
-			k = atoi(msg->argv[9]);   // determines the velocity of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
-			m = atoi(msg->argv[10]);   // determines the velocity of "vertical move" of the particle distribution -- m cells per time step
+			rho = atof(msg->argv[7]); // rho parameter for the initial geometric particle distribution
+			k = atoi(msg->argv[8]);   // determines the velocity of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
+			m = atoi(msg->argv[9]);   // determines the velocity of "vertical move" of the particle distribution -- m cells per time step
 			particle_mode = GEOMETRIC;
-			arg_offset = 11;
+			arg_offset = 10;
 		}
 
 	
-	/* Initialize with a particle distribution where the number of particles per cell-column follows a sinusodial distribution */
-	if (strcmp(init_mode, "SINUSODIAL") == 0) {
-		cout<<"Entered SINUSODIAL"<<endl;
-		particle_mode = SINUSODIAL;
-		k = 0;
-		m = 0;
-		arg_offset = 8;
-	}   /* Initialize particles with "linearly-decreasing" distribution */
+		/* Initialize with a particle distribution where the number of particles per cell-column follows a sinusodial distribution */
+		if (strcmp(init_mode, "SINUSODIAL") == 0) {
+			cout<<"Entered SINUSODIAL"<<endl;
+			particle_mode = SINUSODIAL;
+			k = 0;
+			m = 0;
+			arg_offset = 7;
+		}
+   
+   /* Initialize particles with "linearly-decreasing" distribution */
    /* The linear function is f(x) = -alpha * x + beta , x in [0,1]*/
 		if (strcmp(init_mode, "LINEAR") == 0) {
 			cout<<"Entered LINEAR"<<endl;
 			particle_mode = LINEAR;
 			k = 0;
 			m = 0;
-			alpha = atoi(msg->argv[8]);
-			beta = atoi(msg->argv[9]);
-			arg_offset = 10;
+			alpha = atoi(msg->argv[7]);
+			beta = atoi(msg->argv[8]);
+			arg_offset = 9;
 		}
    
    /* Initialize uniformly particles within a "patch" */
@@ -87,11 +87,11 @@ Main_SDAG_CODE
 			particle_mode = PATCH;
 			k = 0;
 			m = 0;
-			corner_top_left_x = atoi(msg->argv[8]);
-			corner_top_left_y = atoi(msg->argv[9]);
-			corner_bottom_right_x = atoi(msg->argv[10]);
-			corner_bottom_right_y = atoi(msg->argv[11]);
-			arg_offset = 12;
+			corner_top_left_x = atoi(msg->argv[7]);
+			corner_top_left_y = atoi(msg->argv[8]);
+			corner_bottom_right_x = atoi(msg->argv[9]);
+			corner_bottom_right_y = atoi(msg->argv[10]);
+			arg_offset = 11;
 		}
 		
 		/* Check if user requested injection/removal of particles */
@@ -311,10 +311,7 @@ Cell_SDAG_CODE
 	}
 
 	void callAtSync() {
-		if (time % lb_period == 0)
-			AtSync();
-		else 
-			ResumeFromSync();
+		AtSync();
 	}
 	
 	void colorRegion(liveVizRequestMsg *m)
