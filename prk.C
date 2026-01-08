@@ -47,7 +47,7 @@ Main_SDAG_CODE
 		particle_mode=-1;
 		
 		//cout<<"Initialized params:"<<g<<" "<<T<<" "<<n<<" "<<init_mode<<" "<<chare_dim_x<<" "<<chare_dim_y<<endl;
-		L = LEN * (g-1);
+		L = g * LEN;
 		
 			/* Initialize particles with geometric distribution */
 		if (strcmp(init_mode, "GEOMETRIC") == 0) {
@@ -127,7 +127,7 @@ Main_SDAG_CODE
 		
 		
 		/*Creating the 2D chare array*/
-		c=g-1;
+		c=g;
 		per_chare_x=(c+chare_dim_x-1) / chare_dim_x ; 
 		per_chare_edge_x=c-((chare_dim_x-1) * per_chare_x);
 		per_chare_y=(c+chare_dim_y-1) /chare_dim_y;
@@ -224,7 +224,7 @@ Cell_SDAG_CODE
 		__sdag_init();
 		my_neighbors.resize(8);
 		mode=DIPOLES;
-		L = (g-1) * LEN;
+		L = g * LEN;
 		partial_correctness = 1;
 		
 		x_cord=thisIndex.x;
