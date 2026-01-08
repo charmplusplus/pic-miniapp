@@ -35,11 +35,11 @@ Main_SDAG_CODE
 	{
 	  __sdag_init();
 		time_start= CkWallTimer();
-		g = atoi(msg->argv[1]);
-		T = atoi(msg->argv[2]);
+		g = atoi(msg->argv[1]); // grid dimension
+		T = atoi(msg->argv[2]); // number of time steps
 		n = atoi(msg->argv[3]) ;   // total number of particles in the simulation
 		char  *init_mode = msg->argv[4];    // Initialization mode for particles
-		chare_dim_x=atoi(msg->argv[5]);
+		chare_dim_x=atoi(msg->argv[5]); 
 		chare_dim_y=atoi(msg->argv[6]);
 		lb_period=atoi(msg->argv[7]);  // load balancing period
 		removal_mode = 0;
@@ -188,7 +188,9 @@ Main_SDAG_CODE
 	}
 	void statistics(double result)
 	{
-		cout<<"*************************************Time taken per step:"<<result/(T*chare_dim_x*chare_dim_y)<<" sec"<<endl;
+		cout<<"*************************************Average time taken per step:"<<result/(T*chare_dim_x*chare_dim_y)<<" sec"<<endl;
+		cout<<"*************************************Average time taken total:"<<result/(chare_dim_x*chare_dim_y)<<" sec"<<endl;
+
 	}
 	void completed(int result)
 	{
