@@ -35,8 +35,8 @@ Main_SDAG_CODE
 	{
 	  __sdag_init();
 		time_start= CkWallTimer();
-		g = atoi(msg->argv[1]); // grid dimension
-		T = atoi(msg->argv[2]); // number of time steps
+		g = atoi(msg->argv[1]);  // grid dimension
+		T = atoi(msg->argv[2]);  // number of time steps
 		n = atoi(msg->argv[3]) ;   // total number of particles in the simulation
 		char  *init_mode = msg->argv[4];    // Initialization mode for particles
 		chare_dim_x=atoi(msg->argv[5]); 
