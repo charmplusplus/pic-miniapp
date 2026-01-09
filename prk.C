@@ -18,6 +18,7 @@
 /*readonly*/ int         particles_per_cell;
 /*readonly*/ int         k ;   // determines the speed of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
 /*readonly*/ int         m ;   // determines the speed of "vertical move" of the particle distribution -- m cells per time step
+/*readonly*/ int         lb_period;
 
 class Main: public CBase_Main {
 Main_SDAG_CODE
@@ -108,6 +109,8 @@ Main_SDAG_CODE
 			/* Particles per cell to inject */
 				particles_per_cell = atoi(msg->argv[arg_offset+6]);
 				printf("Will inject %d particles at timestep %d\n", (corner_bottom_right_x_inj-corner_top_left_x_inj)*(corner_bottom_right_y_inj-corner_top_left_y_inj)*particles_per_cell, injection_timestep);
+			
+				arg_offset += 7;
 			}
       
 			if (strcmp(msg->argv[arg_offset], "REMOVAL") == 0 ) {
@@ -119,9 +122,22 @@ Main_SDAG_CODE
 				corner_top_left_y_rmv = atoi(msg->argv[arg_offset+3]);
 				corner_bottom_right_x_rmv = atoi(msg->argv[arg_offset+4]);
 				corner_bottom_right_y_rmv = atoi(msg->argv[arg_offset+5]);
+
+				arg_offset += 6;
 			}
+
+			
 		}
 		
+		if (msg->argc > arg_offset){
+			lb_period = atoi(msg->argv[arg_offset]);
+			cout<<"Load balancing period set to "<<lb_period<<" iterations"<<endl;
+		}
+		else{
+			lb_period = 10;
+			cout<<"Using default load balancing period of 10 iterations"<<endl;
+		}
+
 		/*Getting input vars is done: Next step is initializing the grid, particles*/
 		
 		
@@ -311,7 +327,11 @@ Cell_SDAG_CODE
 	}
 
 	void callAtSync() {
-		AtSync();
+		if ((time) % lb_period == 0){
+			AtSync();
+		}
+		else
+			thisProxy[thisIndex].ResumeFromSync();
 	}
 	
 	void colorRegion(liveVizRequestMsg *m)

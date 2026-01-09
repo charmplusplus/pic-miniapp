@@ -26,7 +26,8 @@ readonly int  	corner_bottom_right_y_rmv;
 readonly int         	particles_per_cell;
 readonly int         	k ;   // determines the speed of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
 readonly int         	m ;   // determines the speed of "vertical move" of the particle distribution -- m cells per time step
-  
+readonly int         	lb_period;
+
 mainchare Main {
 	entry Main(CkArgMsg* m);
     	entry [reductiontarget] void completed(int result);
