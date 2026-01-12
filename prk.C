@@ -2,7 +2,6 @@
 #include "prk.h"
 #include "prk.decl.h"
 
-
 #define min(a,b) (((a)<(b))?(a):(b))
 #define max(a,b) (((a)>(b))?(a):(b))
 
@@ -153,8 +152,14 @@ Main_SDAG_CODE
 		
 		//cellProxy=CProxy_Cell::ckNew(chare_dim_x,chare_dim_y);
 		
-		CkArrayOptions opts(chare_dim_x, chare_dim_y);
-		cellProxy = CProxy_Cell::ckNew(opts);
+		CProxy_Grid2DMap myMap = CProxy_Grid2DMap::ckNew(chare_dim_x, chare_dim_y);
+
+    // // Make a new array using that map
+   
+	
+	CkArrayOptions opts(chare_dim_x, chare_dim_y);
+	 opts.setMap(myMap);
+	cellProxy = CProxy_Cell::ckNew(opts);
 
     CkCallback c1(CkIndex_Cell::colorRegion(0),cellProxy);
     liveVizConfig cfg(liveVizConfig::pix_color,true);
@@ -448,4 +453,61 @@ Cell_SDAG_CODE
     		contribute(sizeof(int), &partial_correctness, CkReduction::product_int, cb1);
 	}
 };
+
+
+
+class Grid2DMap : public CkArrayMap
+{
+public:
+  int M, N;  // size of x and y dims
+  int procsM, procsN;
+
+  Grid2DMap(int xdim, int ydim)
+  {
+
+    M = xdim;
+    N = ydim;
+
+    int nprocs = CkNumPes();
+    int procsM = std::ceil(std::sqrt(nprocs));
+    int procsN = nprocs / procsM;
+
+    if (procsM * procsN != nprocs) {
+      CkAbort("Processor grid failed to generate with %d processors (attempting %d x %d != %d)\n", nprocs, procsM, procsN, nprocs);
+    }
+  }
+  Grid2DMap(CkMigrateMessage* m) {}
+  int registerArray(CkArrayIndex& numElements, CkArrayID aid) { return 0; }
+
+  int procNum(int arrayHdl, const CkArrayIndex& idx)
+  {
+    int nprocs = CkNumPes();
+    int procsM = std::ceil(std::sqrt(nprocs));
+    int procsN = nprocs / procsM;
+
+    if (procsM * procsN != nprocs) {
+      CkAbort("Processor grid failed to generate with %d processors\n", nprocs);
+    }
+
+
+    int x = idx.data()[0];
+    int y = idx.data()[1];
+
+    int dataperblock_x = ceil(M / (double)procsM);
+    int dataperblock_y = ceil(N / (double)procsN);
+
+
+    int block_row = x / (double)dataperblock_x;
+    int block_col = y / (double)dataperblock_y;
+
+    //CkPrintf("Chare (%d, %d) is in block (%d / %d, %d / %d)\n", x, y, block_row, procsM, block_col, procsN);
+    int proc = block_row * procsN + block_col;
+    //CkPrintf("Chare (%d, %d) mapped to processor %d\n", x, y, proc);
+   
+    if (proc >= nprocs)
+      CkAbort("Error: Chare (%d, %d) mapped to processor %d >= %d\n", x, y, proc, nprocs);
+    return proc;
+  }
+};
+
 #include "prk.def.h"

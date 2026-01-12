@@ -106,5 +106,10 @@ array [2D] Cell {
 		
 	};
 };
+
+ group Grid2DMap : CkArrayMap
+  {
+    entry Grid2DMap(int xdim, int ydim);
+  };
 };
 
