@@ -33,7 +33,6 @@ Main_SDAG_CODE
 	Main(CkArgMsg* msg) 
 	{
 	  __sdag_init();
-		time_start= CkWallTimer();
 		g = atoi(msg->argv[1]);  // grid dimension
 		T = atoi(msg->argv[2]);  // number of time steps
 		n = atoi(msg->argv[3]) ;   // total number of particles in the simulation
@@ -194,7 +193,8 @@ Main_SDAG_CODE
 				cellProxy(i,j).initializeParticles(neighbors[i][j]);
 		
 						
-		
+		time_start= CkWallTimer();
+
 		free(particles);
 		delete msg;
 	}
