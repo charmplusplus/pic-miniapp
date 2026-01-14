@@ -65,9 +65,8 @@ array [2D] Cell {
 			mainProxy.done_initialization();
 		}
 
-		when beginIterations() {
-		//Now the particles vector is populated
-		serial{
+		when beginIterations() serial {
+			//Now the particles vector is populated
 			simulation_time = CkWallTimer(); // start chare timer
 		}
 		for(time=0; time<T; time++){
@@ -100,7 +99,7 @@ array [2D] Cell {
 			}
 			
 		}
-	}
+	
 		
 		serial {
 			simulation_time=CkWallTimer()-simulation_time;

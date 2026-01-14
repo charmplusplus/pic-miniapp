@@ -209,11 +209,11 @@ Main_SDAG_CODE
 	}
 	void statistics(double result)
 	{
-		cout<<"*************************************Max time per chare:"<<result<<" sec"<<endl;
+		cout<<"*************************************Max time per chare (disregard if load balancing):"<<result<<" sec"<<endl;
 	}
 
 	void avg_stats(double result) {
-		cout<<"*************************************Avg time per chare:"<<result/(chare_dim_x * chare_dim_y)<<" sec"<<endl;
+		cout<<"*************************************Avg time per chare (disregard if load balancing):"<<result/(chare_dim_x * chare_dim_y)<<" sec"<<endl;
 	}
 	void completed(int result)
 	{
