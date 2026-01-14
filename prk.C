@@ -15,9 +15,10 @@
 /*readonly*/ int         removal_mode , injection_mode, injection_timestep, removal_timestep;
 /*readonly*/ int         corner_top_left_x_inj, corner_bottom_right_x_inj, corner_top_left_y_inj, corner_bottom_right_y_inj, corner_top_left_x_rmv, corner_bottom_right_x_rmv, corner_top_left_y_rmv, corner_bottom_right_y_rmv;
 /*readonly*/ int         particles_per_cell;
-/*readonly*/ int         k ;   // determines the speed of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
+/*readonly*/ int         k;   // determines the speed of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
 /*readonly*/ int         m ;   // determines the speed of "vertical move" of the particle distribution -- m cells per time step
 /*readonly*/ int         lb_period;
+/*readonly*/ int			striped; // striped decomposition flag
 
 class Main: public CBase_Main {
 Main_SDAG_CODE
@@ -33,15 +34,34 @@ Main_SDAG_CODE
 	Main(CkArgMsg* msg) 
 	{
 	  __sdag_init();
-		g = atoi(msg->argv[1]);  // grid dimension
-		T = atoi(msg->argv[2]);  // number of time steps
+
+		 if (msg->argc<10) {
+			printf("Usage: %s <#simulation steps> <grid size> <#particles> <k (particle charge semi-increment)> ", msg->argv[0]);
+			printf("<m (vertical particle velocity)>\n");
+			printf("<s (use striped decomposition, 1=yes,0=no)> ");
+			printf("          <chare_dim_x> <chare_dim_y> ");
+			printf("          <init mode> <init parameters>]\n");
+			printf("   init mode \"GEOMETRIC\"  parameters: <attenuation factor>\n");
+			printf("             \"SINUSOIDAL\" parameters: none\n");
+			printf("             \"LINEAR\"     parameters: <negative slope> <constant offset>\n");
+			printf("             \"PATCH\"      parameters: <xleft> <xright>  <ybottom> <ytop>\n");
+			CkExit();
+    	}
+
+		T = atoi(msg->argv[1]);  // grid dimension
+		g = atoi(msg->argv[2]);  // number of time steps
 		n = atoi(msg->argv[3]) ;   // total number of particles in the simulation
-		char  *init_mode = msg->argv[4];    // Initialization mode for particles
-		chare_dim_x=atoi(msg->argv[5]); 
-		chare_dim_y=atoi(msg->argv[6]);
+		k = atoi(msg->argv[4]);   // determines the speed of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
+		m = atoi(msg->argv[5]);   // determines the speed of "vertical move
+		striped = atoi(msg->argv[6]);   // striped decomposition flag
+
+		chare_dim_x=atoi(msg->argv[7]); 
+		chare_dim_y=atoi(msg->argv[8]);
+		char  *init_mode = msg->argv[9];    // Initialization mode for particles
+		
 		removal_mode = 0;
 		injection_mode = 0;
-		int arg_offset;
+		int arg_offset = 10;
 		int64_t c;	
 		particle_mode=-1;
 		
@@ -50,11 +70,8 @@ Main_SDAG_CODE
 		
 			/* Initialize particles with geometric distribution */
 		if (strcmp(init_mode, "GEOMETRIC") == 0) {
-			rho = atof(msg->argv[7]); // rho parameter for the initial geometric particle distribution
-			k = atoi(msg->argv[8]);   // determines the velocity of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
-			m = atoi(msg->argv[9]);   // determines the velocity of "vertical move" of the particle distribution -- m cells per time step
+			rho = atof(msg->argv[arg_offset++]); // rho parameter for the initial geometric particle distribution
 			particle_mode = GEOMETRIC;
-			arg_offset = 10;
 			cout<<"Using GEOMETRIC with rho="<<rho<<" k="<<k<<" m="<<m<<endl;
 		}
 
@@ -63,9 +80,6 @@ Main_SDAG_CODE
 		if (strcmp(init_mode, "SINUSODIAL") == 0) {
 			cout<<"Entered SINUSODIAL"<<endl;
 			particle_mode = SINUSODIAL;
-			k = 0;
-			m = 0;
-			arg_offset = 7;
 		}
    
    /* Initialize particles with "linearly-decreasing" distribution */
@@ -73,24 +87,17 @@ Main_SDAG_CODE
 		if (strcmp(init_mode, "LINEAR") == 0) {
 			cout<<"Entered LINEAR"<<endl;
 			particle_mode = LINEAR;
-			k = 0;
-			m = 0;
-			alpha = atoi(msg->argv[7]);
-			beta = atoi(msg->argv[8]);
-			arg_offset = 9;
-		}
+			alpha = atoi(msg->argv[arg_offset++]);
+			beta = atoi(msg->argv[arg_offset++]);		}
    
    /* Initialize uniformly particles within a "patch" */
 		if (strcmp(init_mode, "PATCH") == 0) {
 			cout<<"Entered PATCH"<<endl;
 			particle_mode = PATCH;
-			k = 0;
-			m = 0;
-			corner_top_left_x = atoi(msg->argv[7]);
-			corner_top_left_y = atoi(msg->argv[8]);
-			corner_bottom_right_x = atoi(msg->argv[9]);
-			corner_bottom_right_y = atoi(msg->argv[10]);
-			arg_offset = 11;
+			corner_top_left_x = atoi(msg->argv[arg_offset++]);
+			corner_top_left_y = atoi(msg->argv[arg_offset++]);
+			corner_bottom_right_x = atoi(msg->argv[arg_offset++]);
+			corner_bottom_right_y = atoi(msg->argv[arg_offset++]);
 		}
 		
 		/* Check if user requested injection/removal of particles */
@@ -98,37 +105,33 @@ Main_SDAG_CODE
 			if (strcmp(msg->argv[arg_offset], "INJECTION") == 0 ) {
 				cout<<"Entered INJECTION"<<endl;
 				injection_mode = 1;
-				injection_timestep = atoi(msg->argv[arg_offset+1]);
+				injection_timestep = atoi(msg->argv[arg_offset++]);
 			/* Coordinates that define the simulation area where injection will take place */
-				corner_top_left_x_inj = atoi(msg->argv[arg_offset+2]);
-				corner_top_left_y_inj = atoi(msg->argv[arg_offset+3]);
-				corner_bottom_right_x_inj = atoi(msg->argv[arg_offset+4]);
-				corner_bottom_right_y_inj = atoi(msg->argv[arg_offset+5]);
+				corner_top_left_x_inj = atoi(msg->argv[arg_offset++]);
+				corner_top_left_y_inj = atoi(msg->argv[arg_offset++]);
+				corner_bottom_right_x_inj = atoi(msg->argv[arg_offset++]);
+				corner_bottom_right_y_inj = atoi(msg->argv[arg_offset++]);
 			/* Particles per cell to inject */
-				particles_per_cell = atoi(msg->argv[arg_offset+6]);
+				particles_per_cell = atoi(msg->argv[arg_offset++]);
 				printf("Will inject %d particles at timestep %d\n", (corner_bottom_right_x_inj-corner_top_left_x_inj)*(corner_bottom_right_y_inj-corner_top_left_y_inj)*particles_per_cell, injection_timestep);
-			
-				arg_offset += 7;
 			}
       
 			if (strcmp(msg->argv[arg_offset], "REMOVAL") == 0 ) {
 				cout<<"Entered REMOVAL"<<endl;
 				removal_mode = 1;
-				removal_timestep = atoi(msg->argv[arg_offset+1]);
+				removal_timestep = atoi(msg->argv[arg_offset++]);
 			/* Coordinates that define the simulation area where the particles will be removed */
-				corner_top_left_x_rmv = atoi(msg->argv[arg_offset+2]);
-				corner_top_left_y_rmv = atoi(msg->argv[arg_offset+3]);
-				corner_bottom_right_x_rmv = atoi(msg->argv[arg_offset+4]);
-				corner_bottom_right_y_rmv = atoi(msg->argv[arg_offset+5]);
-
-				arg_offset += 6;
+				corner_top_left_x_rmv = atoi(msg->argv[arg_offset++]);
+				corner_top_left_y_rmv = atoi(msg->argv[arg_offset++]);
+				corner_bottom_right_x_rmv = atoi(msg->argv[arg_offset++]);
+				corner_bottom_right_y_rmv = atoi(msg->argv[arg_offset++]);
 			}
 
 			
 		}
 		
 		if (msg->argc > arg_offset){
-			lb_period = atoi(msg->argv[arg_offset]);
+			lb_period = atoi(msg->argv[arg_offset++]);
 			cout<<"Load balancing period set to "<<lb_period<<" iterations"<<endl;
 		}
 		else{
@@ -151,12 +154,26 @@ Main_SDAG_CODE
 		
 		//cellProxy=CProxy_Cell::ckNew(chare_dim_x,chare_dim_y);
 		
-		CProxy_Grid2DMap myMap = CProxy_Grid2DMap::ckNew(chare_dim_x, chare_dim_y);
+		int nprocs = CkNumPes();
+		int nprocs_x, nprocs_y;
 
-    // // Make a new array using that map
-   
-	
-	CkArrayOptions opts(chare_dim_x, chare_dim_y);
+		if (striped) {
+			nprocs_x = nprocs;
+			nprocs_y = 1;
+		} else {		
+			// grid decomposition
+			for (nprocs_x=(int) (sqrt(nprocs+1)); nprocs_x>0; nprocs_x--) {
+				if (!(nprocs%nprocs_x)) {
+				nprocs_y = nprocs/nprocs_x;
+				break;
+				}
+			}
+		}
+
+		CProxy_Grid2DMap myMap = CProxy_Grid2DMap::ckNew(chare_dim_x, chare_dim_y, nprocs_x, nprocs_y);
+
+    // Make a new array using that map
+    CkArrayOptions opts(chare_dim_x, chare_dim_y);
 	 opts.setMap(myMap);
 	cellProxy = CProxy_Cell::ckNew(opts);
 
@@ -468,28 +485,13 @@ public:
   int M, N;  // size of x and y dims
   int procsM, procsN;
 
-  Grid2DMap(int xdim, int ydim)
-  {
-
-    M = xdim;
-    N = ydim;
-
-    int nprocs = CkNumPes();
-    int procsM = std::ceil(std::sqrt(nprocs));
-    int procsN = nprocs / procsM;
-
-    if (procsM * procsN != nprocs) {
-      CkAbort("Processor grid failed to generate with %d processors (attempting %d x %d != %d)\n", nprocs, procsM, procsN, nprocs);
-    }
-  }
+  Grid2DMap(int xdim, int ydim, int pM, int pN) : M(xdim), N(ydim), procsM(pM), procsN(pN) {}
   Grid2DMap(CkMigrateMessage* m) {}
   int registerArray(CkArrayIndex& numElements, CkArrayID aid) { return 0; }
 
   int procNum(int arrayHdl, const CkArrayIndex& idx)
   {
     int nprocs = CkNumPes();
-    int procsM = std::ceil(std::sqrt(nprocs));
-    int procsN = nprocs / procsM;
 
     if (procsM * procsN != nprocs) {
       CkAbort("Processor grid failed to generate with %d processors\n", nprocs);

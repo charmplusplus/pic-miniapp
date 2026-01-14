@@ -27,6 +27,7 @@ readonly int         	particles_per_cell;
 readonly int         	k ;   // determines the speed of "horizontal move" of the particle distribution -- (2*k)+1 cells per time step
 readonly int         	m ;   // determines the speed of "vertical move" of the particle distribution -- m cells per time step
 readonly int         	lb_period;
+readonly int			striped; // striped decomposition flag
 
 mainchare Main {
 	entry Main(CkArgMsg* m);
@@ -111,7 +112,7 @@ array [2D] Cell {
 
  group Grid2DMap : CkArrayMap
   {
-    entry Grid2DMap(int xdim, int ydim);
+    entry Grid2DMap(int xdim, int ydim, int xprocs, int yprocs);
   };
 };
 
