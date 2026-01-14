@@ -92,7 +92,7 @@ array [2D] Cell {
 					particles.insert(particles.end(),incoming.begin(),incoming.end());
 				}
 			}
-			if ((time) % lb_period == lb_period-1) {
+			if ((time % lb_period) == lb_period-1) {
 				serial{
 					contribute(CkCallback(CkReductionTarget(Cell, callAtSync), thisProxy));
 				}

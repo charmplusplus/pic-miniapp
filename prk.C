@@ -351,11 +351,7 @@ Cell_SDAG_CODE
 	}
 
 	void callAtSync() {
-		if ((time) % lb_period == 0){
-			AtSync();
-		}
-		else
-			thisProxy[thisIndex].ResumeFromSync();
+		AtSync();
 	}
 	
 	void colorRegion(liveVizRequestMsg *m)
