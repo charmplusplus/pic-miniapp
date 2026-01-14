@@ -25,7 +25,7 @@ Main_SDAG_CODE
 	
 	double      rho ; // rho parameter for the initial particle distribution
 	
-	double      L, time_start;       // size of simulation domain
+	double      L, time_start, time_end;       // size of simulation domain
 	particle_t  *particles;          // the particles array
 	int         particle_mode , alpha, beta, corner_top_left_x, corner_bottom_right_x, corner_top_left_y, corner_bottom_right_y;
 	int64_t n;
@@ -193,7 +193,6 @@ Main_SDAG_CODE
 				cellProxy(i,j).initializeParticles(neighbors[i][j]);
 		
 						
-		time_start= CkWallTimer();
 
 		free(particles);
 		delete msg;
@@ -201,6 +200,7 @@ Main_SDAG_CODE
 	
 	void validation(long result)
 	{
+		time_end= CkWallTimer();
 		long sum_particleId=n*(n-1)/2;
 		if(result==sum_particleId)
 			cout<<"***********************************Successful validation (should be "<<sum_particleId<<" for n="<<n<<") and value of result is:"<<result<<endl;
@@ -209,9 +209,11 @@ Main_SDAG_CODE
 	}
 	void statistics(double result)
 	{
-		cout<<"*************************************Average time taken per step:"<<result/(T*chare_dim_x*chare_dim_y)<<" sec"<<endl;
-		cout<<"*************************************Average time taken total:"<<result/(chare_dim_x*chare_dim_y)<<" sec"<<endl;
+		cout<<"*************************************Max time per chare:"<<result<<" sec"<<endl;
+	}
 
+	void avg_stats(double result) {
+		cout<<"*************************************Avg time per chare:"<<result/(chare_dim_x * chare_dim_y)<<" sec"<<endl;
 	}
 	void completed(int result)
 	{
@@ -219,7 +221,7 @@ Main_SDAG_CODE
 			cout<<"***********************************Successful and value of result is:"<<result<<endl;
 		else
 			cout<<"***********************************Failed and value of result is:"<<result<<endl;
-		double time_end= CkWallTimer();
+		
 		cout<<"*************************************Total Time taken for execution:"<<time_end-time_start<<" sec"<<endl;
 		CkExit();
 	}
@@ -448,7 +450,11 @@ Cell_SDAG_CODE
       			contribute(sizeof(long), &val, CkReduction::sum_long, cb);
     		}
     		CkCallback cb2(CkReductionTarget(Main, statistics), mainProxy);
-    		contribute(sizeof(double), &simulation_time, CkReduction::sum_double, cb2);
+    		contribute(sizeof(double), &simulation_time, CkReduction::max_double, cb2);
+			CkCallback cb_avg(CkReductionTarget(Main, avg_stats), mainProxy);
+    		contribute(sizeof(double), &simulation_time, CkReduction::sum_double, cb_avg);
+
+
     		CkCallback cb1(CkReductionTarget(Main, completed), mainProxy);
     		contribute(sizeof(int), &partial_correctness, CkReduction::product_int, cb1);
 	}

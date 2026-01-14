@@ -33,6 +33,7 @@ mainchare Main {
     	entry [reductiontarget] void completed(int result);
     	entry [reductiontarget] void validation(long result);
     	entry [reductiontarget] void statistics(double result);
+    	entry [reductiontarget] void avg_stats(double result);
     	entry void done_initialization();	
     	entry void liveViz_support() {
     	  for(itr=0;itr<chare_dim_x * chare_dim_y;itr++) {
@@ -40,7 +41,8 @@ mainchare Main {
     	  }
     	  
     	  serial {
-    	    cout <<"***************************done"<<endl;
+			time_start= CkWallTimer();
+			cellProxy.beginIterations();
     	  }
     	};
 };
@@ -49,6 +51,7 @@ array [2D] Cell {
 	entry Cell(void);
 	entry void colorRegion(liveVizRequestMsg *m);
 	entry void initializeParticles(std::vector<particle_t> incoming);
+	entry void beginIterations();
 	entry void receiveParticles(int time,std::vector<particle_t> incoming);
 	entry void ResumeFromSync();
 	entry [reductiontarget] void callAtSync();
@@ -61,16 +64,13 @@ array [2D] Cell {
 			particles=incoming;
 			mainProxy.done_initialization();
 		}
-		//Now the particles vector is populated
-		for(time=0; time<T; time++){
-			serial {
-				//if(x_cord==4 && y_cord==1)
-				//CkPrintf("%d %d : time itr %d \n",x_cord,y_cord,time);
 
-				if (time == 1) {
-				    simulation_time = CkWallTimer();
-				}
-			}
+		when beginIterations() {
+		//Now the particles vector is populated
+		serial{
+			simulation_time = CkWallTimer(); // start chare timer
+		}
+		for(time=0; time<T; time++){
 			if (injection_mode && (time == injection_timestep))
 			serial {
 				inject_particles(injection_timestep, corner_top_left_x_inj, corner_bottom_right_x_inj, corner_top_left_y_inj, corner_bottom_right_y_inj, particles_per_cell, particles, my_start_gp_x, my_end_gp_x, my_start_gp_y, my_end_gp_y);
@@ -92,12 +92,15 @@ array [2D] Cell {
 					particles.insert(particles.end(),incoming.begin(),incoming.end());
 				}
 			}
-			serial{
-				contribute(CkCallback(CkReductionTarget(Cell, callAtSync), thisProxy));
+			if ((time) % lb_period == lb_period-1) {
+				serial{
+					contribute(CkCallback(CkReductionTarget(Cell, callAtSync), thisProxy));
+				}
+				when ResumeFromSync() serial {}
 			}
-			when ResumeFromSync() serial {}
 			
 		}
+	}
 		
 		serial {
 			simulation_time=CkWallTimer()-simulation_time;
