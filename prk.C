@@ -241,7 +241,7 @@ Main_SDAG_CODE
 
 		}
 
-		CkPrintf("*************************************Overall max time per chare (excluding load balancing): %f sec\n", phase_max);
+		CkPrintf("*************************************Overall max time per chare (excluding load balancing): %lf sec\n", phase_max);
 	
 	}
 
@@ -249,16 +249,17 @@ Main_SDAG_CODE
 		double total_average = 0.0;
 		double phase_average = 0.0;
 		for (int i=0; i<n; i++) {
-			phase_average += result[i] / (chare_dim_x * chare_dim_y);
-			total_average += phase_average;
+			double iter_avg = result[i] / (chare_dim_x * chare_dim_y);
+			phase_average += iter_avg;
+			total_average += iter_avg;
 
 			if (i % lb_period == lb_period - 1) {
-				CkPrintf("Avg time for iteration %d to %d (excluding load balancing): %f sec\n", i - lb_period + 1, i, phase_average / lb_period);
+				CkPrintf("Avg time for iteration %d to %d (excluding load balancing): %lf sec\n", i - lb_period + 1, i, phase_average / lb_period);
 				phase_average = 0.0;
 			}
 		}
 
-		CkPrintf("*************************************Overall avg time per chare (excluding load balancing): %f sec\n", total_average / n);
+		CkPrintf("*************************************Overall avg time per chare (excluding load balancing): %lf sec\n", total_average / n);
 	}
 	void completed(int result)
 	{
