@@ -97,8 +97,8 @@ array [2D] Cell {
 			}
 			serial{ 
 				double stop_time = CkWallTimer();
-				if (time > iteration_times.size()) {
-					iteration_times.resize(T, 0.0);
+				if (time >= iteration_times.size()) {
+					CkAbort("Error: time %d exceeds iteration_times size %d on chare (%d,%d)\n", time, iteration_times.size(), x_cord, y_cord);
 				}
 				iteration_times[time] = stop_time - iteration_time_start;
 			}

@@ -379,6 +379,8 @@ Cell_SDAG_CODE
 		p|mode;
 		p|L;
 		p|partial_correctness;
+		p|iteration_times;
+		p|iteration_time_start;
 		
 	}
 
