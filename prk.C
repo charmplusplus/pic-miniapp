@@ -232,9 +232,13 @@ Main_SDAG_CODE
 			phase_total += result[i];
 
 			if (i % lb_period == lb_period - 1) {
+				if (phase_total / lb_period > phase_max) {
+					phase_max = phase_total / lb_period;
+				}
 				CkPrintf("Average MAX time for iteration %d to %d (excluding load balancing): %f sec\n", i - lb_period + 1, i, phase_total / lb_period);
 				phase_total = 0.0;
 			}
+
 		}
 
 		CkPrintf("*************************************Overall max time per chare (excluding load balancing): %f sec\n", phase_max);
