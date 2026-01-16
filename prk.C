@@ -224,13 +224,37 @@ Main_SDAG_CODE
     		else
       			cout<<"***********************************Failed validation (should be "<<sum_particleId<<" for n="<<n<<") and value of result is:"<<result<<endl;
 	}
-	void statistics(double result)
+	void statistics(double *result, int n)
 	{
-		cout<<"*************************************Max time per chare (disregard if load balancing):"<<result<<" sec"<<endl;
+		double phase_max = 0.0;
+		double phase_total = 0.0;
+		for (int i=0; i<n; i++) {
+			phase_total += result[i];
+
+			if (i % lb_period == lb_period - 1) {
+				CkPrintf("Average MAX time for iteration %d to %d (excluding load balancing): %f sec\n", i - lb_period + 1, i, phase_total / lb_period);
+				phase_total = 0.0;
+			}
+		}
+
+		CkPrintf("*************************************Overall max time per chare (excluding load balancing): %f sec\n", phase_max);
+	
 	}
 
-	void avg_stats(double result) {
-		cout<<"*************************************Avg time per chare (disregard if load balancing):"<<result/(chare_dim_x * chare_dim_y)<<" sec"<<endl;
+	void avg_stats(double *result, int n) {
+		double total_average = 0.0;
+		double phase_average = 0.0;
+		for (int i=0; i<n; i++) {
+			phase_average += result[i] / (chare_dim_x * chare_dim_y);
+			total_average += phase_average;
+
+			if (i % lb_period == lb_period - 1) {
+				CkPrintf("Avg time for iteration %d to %d (excluding load balancing): %f sec\n", i - lb_period + 1, i, phase_average / lb_period);
+				phase_average = 0.0;
+			}
+		}
+
+		CkPrintf("*************************************Overall avg time per chare (excluding load balancing): %f sec\n", total_average / n);
 	}
 	void completed(int result)
 	{
@@ -259,6 +283,8 @@ Cell_SDAG_CODE
 	int64_t 	partial_correctness;  /*To test the correctness of the code*/
 	double   	L;
 	double simulation_time;
+	double iteration_time_start;
+	std::vector<double> iteration_times;
 	int64_t my_chare_x, my_chare_y;
     	Cell() {
 		__sdag_init();
@@ -275,6 +301,7 @@ Cell_SDAG_CODE
 		std::vector<LBRealType> centroid = {(LBRealType)thisIndex.x, (LBRealType)thisIndex.y, 0.0};
 		setObjPosition(centroid);
 		 
+		iteration_times.resize(T, 0.0);
 		
 		my_chare_x=(x_cord== chare_dim_x-1) ? per_chare_edge_x : per_chare_x;
 		my_chare_y = (y_cord == chare_dim_y -1) ? per_chare_edge_y : per_chare_y;
@@ -463,9 +490,9 @@ Cell_SDAG_CODE
       			contribute(sizeof(long), &val, CkReduction::sum_long, cb);
     		}
     		CkCallback cb2(CkReductionTarget(Main, statistics), mainProxy);
-    		contribute(sizeof(double), &simulation_time, CkReduction::max_double, cb2);
+    		contribute(sizeof(double) * T, iteration_times.data(), CkReduction::max_double, cb2);
 			CkCallback cb_avg(CkReductionTarget(Main, avg_stats), mainProxy);
-    		contribute(sizeof(double), &simulation_time, CkReduction::sum_double, cb_avg);
+    		contribute(sizeof(double) * T, iteration_times.data(), CkReduction::sum_double, cb_avg);
 
 
     		CkCallback cb1(CkReductionTarget(Main, completed), mainProxy);

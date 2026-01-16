@@ -33,8 +33,8 @@ mainchare Main {
 	entry Main(CkArgMsg* m);
     	entry [reductiontarget] void completed(int result);
     	entry [reductiontarget] void validation(long result);
-    	entry [reductiontarget] void statistics(double result);
-    	entry [reductiontarget] void avg_stats(double result);
+    	entry [reductiontarget] void statistics(double result[n], int n);
+    	entry [reductiontarget] void avg_stats(double result[n], int n);
     	entry void done_initialization();	
     	entry void liveViz_support() {
     	  for(itr=0;itr<chare_dim_x * chare_dim_y;itr++) {
@@ -71,6 +71,9 @@ array [2D] Cell {
 			simulation_time = CkWallTimer(); // start chare timer
 		}
 		for(time=0; time<T; time++){
+			serial{
+				iteration_time_start = CkWallTimer();
+			}
 			if (injection_mode && (time == injection_timestep))
 			serial {
 				inject_particles(injection_timestep, corner_top_left_x_inj, corner_bottom_right_x_inj, corner_top_left_y_inj, corner_bottom_right_y_inj, particles_per_cell, particles, my_start_gp_x, my_end_gp_x, my_start_gp_y, my_end_gp_y);
@@ -92,11 +95,20 @@ array [2D] Cell {
 					particles.insert(particles.end(),incoming.begin(),incoming.end());
 				}
 			}
+			serial{ 
+				double stop_time = CkWallTimer();
+				if (time > iteration_times.size()) {
+					iteration_times.resize(T, 0.0);
+				}
+				iteration_times[time] = stop_time - iteration_time_start;
+			}
 			if ((time % lb_period) == lb_period-1) {
 				serial{
 					contribute(CkCallback(CkReductionTarget(Cell, callAtSync), thisProxy));
 				}
-				when ResumeFromSync() serial {}
+				when ResumeFromSync() serial {
+					
+				}
 			}
 			
 		}
