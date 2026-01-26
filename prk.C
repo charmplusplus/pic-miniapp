@@ -246,20 +246,19 @@ Main_SDAG_CODE
 	}
 
 	void avg_stats(double *result, int n) {
-		double total_average = 0.0;
-		double phase_average = 0.0;
+		// this is the average percent variation for each iteration
+		double phase_total = 0.0;
 		for (int i=0; i<n; i++) {
 			double iter_avg = result[i] / (chare_dim_x * chare_dim_y);
-			phase_average += iter_avg;
-			total_average += iter_avg;
-
+			phase_total += iter_avg;
+			
 			if (i % lb_period == lb_period - 1) {
-				CkPrintf("Avg time for iteration %d to %d (excluding load balancing): %lf sec\n", i - lb_period + 1, i, phase_average / lb_period);
-				phase_average = 0.0;
+				CkPrintf("Average for iteration %d to %d: %lf\n", 
+					i - lb_period + 1, i, phase_total / lb_period);
+				phase_total = 0.0;
 			}
 		}
 
-		CkPrintf("*************************************Overall avg time per chare (excluding load balancing): %lf sec\n", total_average / n);
 	}
 	void completed(int result)
 	{
@@ -290,6 +289,13 @@ Cell_SDAG_CODE
 	double simulation_time;
 	double iteration_time_start;
 	std::vector<double> iteration_times;
+	std::vector<double> iteration_percent_variation;
+
+	double computation_time_start, computation_time_end;
+
+	double old_particle_count;
+	double communicated_particles;
+
 	int64_t my_chare_x, my_chare_y;
     	Cell() {
 		__sdag_init();
@@ -307,6 +313,7 @@ Cell_SDAG_CODE
 		setObjPosition(centroid);
 		 
 		iteration_times.resize(T, 0.0);
+		iteration_percent_variation.resize(T, 0.0);
 		
 		my_chare_x=(x_cord== chare_dim_x-1) ? per_chare_edge_x : per_chare_x;
 		my_chare_y = (y_cord == chare_dim_y -1) ? per_chare_edge_y : per_chare_y;
@@ -381,6 +388,7 @@ Cell_SDAG_CODE
 		p|partial_correctness;
 		p|iteration_times;
 		p|iteration_time_start;
+		p|iteration_percent_variation;
 		
 	}
 
@@ -500,6 +508,8 @@ Cell_SDAG_CODE
     		contribute(sizeof(double) * T, iteration_times.data(), CkReduction::max_double, cb2);
 			CkCallback cb_avg(CkReductionTarget(Main, avg_stats), mainProxy);
     		contribute(sizeof(double) * T, iteration_times.data(), CkReduction::sum_double, cb_avg);
+			CkCallback cb_avg2(CkReductionTarget(Main, avg_stats), mainProxy);
+    		contribute(sizeof(double) * T, iteration_percent_variation.data(), CkReduction::sum_double, cb_avg2);
 
 
     		CkCallback cb1(CkReductionTarget(Main, completed), mainProxy);

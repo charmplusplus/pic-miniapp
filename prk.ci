@@ -68,10 +68,13 @@ array [2D] Cell {
 
 		when beginIterations() serial {
 			//Now the particles vector is populated
+			
 			simulation_time = CkWallTimer(); // start chare timer
 		}
 		for(time=0; time<T; time++){
 			serial{
+				old_particle_count=particles.size();
+				communicated_particles=0;
 				iteration_time_start = CkWallTimer();
 			}
 			if (injection_mode && (time == injection_timestep))
@@ -84,7 +87,9 @@ array [2D] Cell {
 			}
 			
 			serial {
+				computation_time_start = CkWallTimer();
 				compute_displacement_forces();
+				computation_time_end = CkWallTimer();
 				sendParticles();
 			}
 			for(noNeighbours=0;noNeighbours<NEIGHBORS;noNeighbours++)
@@ -93,14 +98,33 @@ array [2D] Cell {
 				serial 
 				{
 					particles.insert(particles.end(),incoming.begin(),incoming.end());
+					communicated_particles += incoming.size();
 				}
 			}
 			serial{ 
 				double stop_time = CkWallTimer();
+				double iteration_time = stop_time - iteration_time_start;
+
+				double computation_time = computation_time_end - computation_time_start;
+				double communication_time = iteration_time - computation_time;
+
+				//CkPrintf("TIME DATA---%d, %d, %d, %lf, %lf, %lf, %d\n", time, x_cord, y_cord, computation_time, communication_time, iteration_time, particles.size());
+
 				if (time >= iteration_times.size()) {
 					CkAbort("Error: time %d exceeds iteration_times size %d on chare (%d,%d)\n", time, iteration_times.size(), x_cord, y_cord);
 				}
-				iteration_times[time] = stop_time - iteration_time_start;
+				iteration_times[time] = communication_time;//particles.size();//stop_time - iteration_time_start;
+
+				if (old_particle_count + communicated_particles != particles.size()) {
+					// add the communication that I sent away
+					communicated_particles += std::abs(old_particle_count + communicated_particles - particles.size());
+				}
+				
+				iteration_percent_variation[time] = communicated_particles;
+				
+				int chare_id = thisIndex.x + thisIndex.y * chare_dim_x;
+				//CkPrintf("SHEET DATA---%d, %d, %d, %d, %d, %d\n", time, chare_id, CkMyPe(), thisIndex.x, thisIndex.y, particles.size());
+			
 			}
 			if ((time % lb_period) == lb_period-1) {
 				serial{
