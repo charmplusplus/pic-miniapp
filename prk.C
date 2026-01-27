@@ -229,14 +229,12 @@ Main_SDAG_CODE
 		double phase_max = 0.0;
 		double phase_total = 0.0;
 		for (int i=0; i<n; i++) {
-			phase_total += result[i];
-
+			if (result[i] > phase_max) {
+				phase_max = result[i];
+			}
 			if (i % lb_period == lb_period - 1) {
-				if (phase_total / lb_period > phase_max) {
-					phase_max = phase_total / lb_period;
-				}
-				CkPrintf("Average MAX time for iteration %d to %d (excluding load balancing): %f sec\n", i - lb_period + 1, i, phase_total / lb_period);
-				phase_total = 0.0;
+				CkPrintf("MAX time from iteration %d to %d (excluding load balancing): %f sec\n", i - lb_period + 1, i, phase_max);
+				phase_max = 0.0;
 			}
 
 		}
