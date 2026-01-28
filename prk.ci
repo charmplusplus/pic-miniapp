@@ -56,6 +56,13 @@ array [2D] Cell {
 	entry void receiveParticles(int time,std::vector<particle_t> incoming);
 	entry void ResumeFromSync();
 	entry [reductiontarget] void callAtSync();
+	entry void start_comm();
+	entry void compute_completed(double result[n], int n);
+	entry void comm_completed(double result[n], int n);
+	entry void comm_done();
+	entry void lb_completed(double result[n], int n);
+	entry void done_lb();
+
 	entry void run() {
 		when initializeParticles(std::vector<particle_t> incoming)
 		serial
@@ -90,7 +97,23 @@ array [2D] Cell {
 				computation_time_start = CkWallTimer();
 				compute_displacement_forces();
 				computation_time_end = CkWallTimer();
-				sendParticles();
+
+				if (_lb_args.debug()) {
+					double comp_time[3];
+					comp_time[0] = computation_time_start;
+					comp_time[1] = computation_time_end;
+					comp_time[2] = CkMyPe();
+					cellProxy(0,0).compute_completed(comp_time, 3);
+				} else {
+					// do nothing
+					sendParticles();
+				}
+			}
+			if (_lb_args.debug()) {
+				when start_comm() serial {
+					comm_time_start = CkWallTimer();
+					sendParticles();
+				}
 			}
 			for(noNeighbours=0;noNeighbours<NEIGHBORS;noNeighbours++)
 			{
@@ -101,6 +124,20 @@ array [2D] Cell {
 					communicated_particles += incoming.size();
 				}
 			}
+			if (_lb_args.debug()) {
+				serial{
+					comm_time_end = CkWallTimer();
+				double comm_time[3];
+					comm_time[0] = comm_time_start;
+					comm_time[1] = comm_time_end;
+					comm_time[2] = CkMyPe();
+					cellProxy(0,0).comm_completed(comm_time, 3);
+				}
+			}
+			if(_lb_args.debug()){ 
+				when comm_done() serial{ 
+					;}
+				}
 			serial{ 
 				double stop_time = CkWallTimer();
 				double iteration_time = stop_time - iteration_time_start;
@@ -128,13 +165,25 @@ array [2D] Cell {
 			}
 			if ((time % lb_period) == lb_period-1) {
 				serial{
+					lb_start_time = CkWallTimer();
 					contribute(CkCallback(CkReductionTarget(Cell, callAtSync), thisProxy));
 				}
 				when ResumeFromSync() serial {
-					
+					lb_end_time = CkWallTimer();
+				}
+
+				if (_lb_args.debug()) {
+					// contribute lb times
+					serial{
+						double lb_time[3];
+						lb_time[0] = lb_start_time;
+						lb_time[1] = lb_end_time;
+						lb_time[2] = CkMyPe();
+						cellProxy(0,0).lb_completed(lb_time, 3);
+					}
+					when done_lb() serial{}
 				}
 			}
-			
 		}
 	
 		

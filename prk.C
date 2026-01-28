@@ -233,7 +233,7 @@ Main_SDAG_CODE
 				phase_max = result[i];
 			}
 			if (i % lb_period == lb_period - 1) {
-				CkPrintf("MAX time from iteration %d to %d (excluding load balancing): %f sec\n", i - lb_period + 1, i, phase_max);
+				CkPrintf("Max comm time per chare from iteration %d to %d (excluding load balancing): %f sec\n", i - lb_period + 1, i, phase_max);
 				phase_max = 0.0;
 			}
 
@@ -251,7 +251,7 @@ Main_SDAG_CODE
 			phase_total += iter_avg;
 			
 			if (i % lb_period == lb_period - 1) {
-				CkPrintf("Average for iteration %d to %d: %lf\n", 
+				CkPrintf("Average comm time per chare for iteration %d to %d: %lf\n", 
 					i - lb_period + 1, i, phase_total / lb_period);
 				phase_total = 0.0;
 			}
@@ -290,9 +290,16 @@ Cell_SDAG_CODE
 	std::vector<double> iteration_percent_variation;
 
 	double computation_time_start, computation_time_end;
+	double comm_time_start, comm_time_end;
+	double lb_start_time, lb_end_time;
 
 	double old_particle_count;
 	double communicated_particles;
+
+	int reduction_counter;
+	std::vector<std::pair<double, double>> compute_time_per_pe;
+	std::vector<std::pair<double, double>> comm_time_per_pe;
+	std::vector<std::pair<double, double>> lb_time_per_pe;
 
 	int64_t my_chare_x, my_chare_y;
     	Cell() {
@@ -301,11 +308,19 @@ Cell_SDAG_CODE
 		mode=DIPOLES;
 		L = g * LEN;
 		partial_correctness = 1;
+
+		reduction_counter = 0;
 		
 		x_cord=thisIndex.x;
 		y_cord=thisIndex.y;
 
 		usesAtSync = true;
+
+		if (my_chare_x == 0 || my_chare_y == 0){
+			compute_time_per_pe.resize(CkNumPes(), std::make_pair(0.0, 0.0));
+			comm_time_per_pe.resize(CkNumPes(), std::make_pair(0.0, 0.0));
+			lb_time_per_pe.resize(CkNumPes(), std::make_pair(0.0, 0.0));
+		}
 
 		std::vector<LBRealType> centroid = {(LBRealType)thisIndex.x, (LBRealType)thisIndex.y, 0.0};
 		setObjPosition(centroid);
@@ -506,12 +521,96 @@ Cell_SDAG_CODE
     		contribute(sizeof(double) * T, iteration_times.data(), CkReduction::max_double, cb2);
 			CkCallback cb_avg(CkReductionTarget(Main, avg_stats), mainProxy);
     		contribute(sizeof(double) * T, iteration_times.data(), CkReduction::sum_double, cb_avg);
-			CkCallback cb_avg2(CkReductionTarget(Main, avg_stats), mainProxy);
-    		contribute(sizeof(double) * T, iteration_percent_variation.data(), CkReduction::sum_double, cb_avg2);
+			// CkCallback cb_avg2(CkReductionTarget(Main, avg_stats), mainProxy);
+    		// contribute(sizeof(double) * T, iteration_percent_variation.data(), CkReduction::sum_double, cb_avg2);
 
 
     		CkCallback cb1(CkReductionTarget(Main, completed), mainProxy);
     		contribute(sizeof(int), &partial_correctness, CkReduction::product_int, cb1);
+	}
+
+	void compute_completed(double *result, int n){
+		reduction_counter++;
+
+		int pe = (int)result[2];
+		double start_time = result[0];
+		double end_time = result[1];
+
+		if (compute_time_per_pe[pe].first == 0 || start_time < compute_time_per_pe[pe].first)
+			compute_time_per_pe[pe].first = start_time;
+		if (end_time > compute_time_per_pe[pe].second)
+			compute_time_per_pe[pe].second = end_time;
+
+
+		if (reduction_counter == chare_dim_x * chare_dim_y) {
+			std::string output_str = "comp," +std::to_string(time) + ",";
+			for (int i = 0; i < compute_time_per_pe.size(); i++) {
+				double comp_time = compute_time_per_pe[i].second - compute_time_per_pe[i].first;
+				char buffer[256];
+				snprintf(buffer, sizeof(buffer), "%lf,", comp_time);
+				output_str += buffer;
+			}
+			CkPrintf("%s\n", output_str.c_str());
+
+			thisProxy.start_comm();
+			reduction_counter = 0;
+		} 
+	}
+
+	void comm_completed(double *result, int n){
+		reduction_counter++;
+
+		int pe = (int)result[2];
+		double start_time = result[0];
+		double end_time = result[1];
+
+		if (comm_time_per_pe[pe].first == 0 || start_time < comm_time_per_pe[pe].first)
+			comm_time_per_pe[pe].first = start_time;
+		if (end_time > comm_time_per_pe[pe].second)
+			comm_time_per_pe[pe].second = end_time;
+
+
+		if (reduction_counter == chare_dim_x * chare_dim_y) {
+			std::string output_str = "comm," + std::to_string(time) + ",";
+			for (int i = 0; i < comm_time_per_pe.size(); i++) {
+				double comm_time = comm_time_per_pe[i].second - comm_time_per_pe[i].first;
+				char buffer[256];
+				snprintf(buffer, sizeof(buffer), "%lf,", comm_time);
+				output_str += buffer;
+			}
+			CkPrintf("%s\n", output_str.c_str());
+
+			thisProxy.comm_done();
+			reduction_counter = 0;
+		} 
+	}
+
+	void lb_completed(double *result, int n){
+		reduction_counter++;
+
+		int pe = (int)result[2];
+		double start_time = result[0];
+		double end_time = result[1];
+
+		if (lb_time_per_pe[pe].first == 0 || start_time < lb_time_per_pe[pe].first)
+			lb_time_per_pe[pe].first = start_time;
+		if (end_time > lb_time_per_pe[pe].second)
+			lb_time_per_pe[pe].second = end_time;
+
+
+		if (reduction_counter == chare_dim_x * chare_dim_y) {
+			std::string output_str = "lb," + std::to_string(time) + ",";
+			for (int i = 0; i < lb_time_per_pe.size(); i++) {
+				double comm_time = lb_time_per_pe[i].second - lb_time_per_pe[i].first;
+				char buffer[256];
+				snprintf(buffer, sizeof(buffer), "%lf,", comm_time);
+				output_str += buffer;
+			}
+			CkPrintf("%s\n", output_str.c_str());
+
+			thisProxy.done_lb();
+			reduction_counter = 0;
+		} 
 	}
 };
 
