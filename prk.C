@@ -316,7 +316,7 @@ Cell_SDAG_CODE
 
 		usesAtSync = true;
 
-		if (my_chare_x == 0 || my_chare_y == 0){
+		if (x_cord == 0 && y_cord == 0){
 			compute_time_per_pe.resize(CkNumPes(), std::make_pair(0.0, 0.0));
 			comm_time_per_pe.resize(CkNumPes(), std::make_pair(0.0, 0.0));
 			lb_time_per_pe.resize(CkNumPes(), std::make_pair(0.0, 0.0));
@@ -402,6 +402,10 @@ Cell_SDAG_CODE
 		p|iteration_times;
 		p|iteration_time_start;
 		p|iteration_percent_variation;
+		p|compute_time_per_pe;
+		p|comm_time_per_pe;
+		p|lb_time_per_pe;
+		p|reduction_counter;
 		
 	}
 
@@ -540,7 +544,6 @@ Cell_SDAG_CODE
 			compute_time_per_pe[pe].first = start_time;
 		if (end_time > compute_time_per_pe[pe].second)
 			compute_time_per_pe[pe].second = end_time;
-
 
 		if (reduction_counter == chare_dim_x * chare_dim_y) {
 			std::string output_str = "comp," +std::to_string(time) + ",";
