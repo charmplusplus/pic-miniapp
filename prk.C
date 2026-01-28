@@ -545,6 +545,7 @@ Cell_SDAG_CODE
 		if (end_time > compute_time_per_pe[pe].second)
 			compute_time_per_pe[pe].second = end_time;
 
+
 		if (reduction_counter == chare_dim_x * chare_dim_y) {
 			std::string output_str = "comp," +std::to_string(time) + ",";
 			for (int i = 0; i < compute_time_per_pe.size(); i++) {
@@ -552,6 +553,8 @@ Cell_SDAG_CODE
 				char buffer[256];
 				snprintf(buffer, sizeof(buffer), "%lf,", comp_time);
 				output_str += buffer;
+				compute_time_per_pe[i].first = 0.0;
+				compute_time_per_pe[i].second = 0.0;
 			}
 			CkPrintf("%s\n", output_str.c_str());
 
@@ -580,6 +583,8 @@ Cell_SDAG_CODE
 				char buffer[256];
 				snprintf(buffer, sizeof(buffer), "%lf,", comm_time);
 				output_str += buffer;
+				comm_time_per_pe[i].first = 0.0;
+				comm_time_per_pe[i].second = 0.0;
 			}
 			CkPrintf("%s\n", output_str.c_str());
 
@@ -608,6 +613,8 @@ Cell_SDAG_CODE
 				char buffer[256];
 				snprintf(buffer, sizeof(buffer), "%lf,", comm_time);
 				output_str += buffer;
+				lb_time_per_pe[i].first = 0.0;
+				lb_time_per_pe[i].second = 0.0;
 			}
 			CkPrintf("%s\n", output_str.c_str());
 

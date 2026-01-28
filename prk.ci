@@ -98,7 +98,7 @@ array [2D] Cell {
 				compute_displacement_forces();
 				computation_time_end = CkWallTimer();
 
-				if (_lb_args.debug()) {
+				if (_lb_args.debug() == -1) {
 					double comp_time[3];
 					comp_time[0] = computation_time_start;
 					comp_time[1] = computation_time_end;
@@ -109,7 +109,7 @@ array [2D] Cell {
 					sendParticles();
 				}
 			}
-			if (_lb_args.debug()) {
+			if (_lb_args.debug() == -1) {
 				when start_comm() serial {
 					comm_time_start = CkWallTimer();
 					sendParticles();
@@ -124,7 +124,7 @@ array [2D] Cell {
 					communicated_particles += incoming.size();
 				}
 			}
-			if (_lb_args.debug()) {
+			if (_lb_args.debug() == -1) {
 				serial{
 					comm_time_end = CkWallTimer();
 				double comm_time[3];
@@ -134,7 +134,7 @@ array [2D] Cell {
 					cellProxy(0,0).comm_completed(comm_time, 3);
 				}
 			}
-			if(_lb_args.debug()){ 
+			if(_lb_args.debug() == -1){ 
 				when comm_done() serial{ 
 					;}
 				}
@@ -172,7 +172,7 @@ array [2D] Cell {
 					lb_end_time = CkWallTimer();
 				}
 
-				if (_lb_args.debug()) {
+				if (_lb_args.debug() == -1) {
 					// contribute lb times
 					serial{
 						double lb_time[3];
